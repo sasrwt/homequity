@@ -2,6 +2,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import sklearn 
 
 # Load the trained model
 with open("hmeq_model.pkl", "rb") as file:
@@ -76,6 +77,7 @@ if st.button("Evaluate Loan"):
         st.write("The prediction is: **Bad Loan**  🚫")
     else:
         st.write("The prediction is: **Good Loan** 💲")
+
 
 
 
