@@ -9,12 +9,12 @@ import pickle
 import pandas as pd
 
 # Load the trained model
-with open("c:/mldeploy/hmeq_model.pkl", "rb") as file:
+with open("hmeq_model.pkl", "rb") as file:
     model = pickle.load(file)
 
 # Title for the app
 st.markdown(
-    "<h1 style='text-align: center; background-color: #ffcccc; padding: 10px; color: #cc0000;'><b>Home Equity Loan Evaluation</b></h1>",
+    "<h1 style='text-align: center; background-color: #ffcccc; padding: 10px; color: #cc0000;'><b>Home Equity Loan Approval</b></h1>",
     unsafe_allow_html=True
 )
 
@@ -56,6 +56,9 @@ input_data = pd.DataFrame({
     "JOB": [job]
 })
 
+
+
+
 # One-hot encode the categorical variables to match the model's training data
 input_data_encoded = pd.get_dummies(input_data, columns=['REASON', 'JOB'])
 
@@ -78,4 +81,5 @@ if st.button("Evaluate Loan"):
         st.write("The prediction is: **Bad Loan**  🚫")
     else:
         st.write("The prediction is: **Good Loan** 💲")
+
 
