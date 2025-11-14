@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
 import streamlit as st
 import pickle
 import pandas as pd
@@ -81,5 +76,6 @@ if st.button("Evaluate Loan"):
         st.write("The prediction is: **Bad Loan**  🚫")
     else:
         st.write("The prediction is: **Good Loan** 💲")
+
 
 
