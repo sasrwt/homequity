@@ -4,9 +4,18 @@ import pickle
 import pandas as pd
 import sklearn 
 
+'''
 # Load the trained model
 with open("hmeq_model.pkl", "rb") as file:
     model = pickle.load(file)
+'''
+# Updated way to load for performance
+@st.cache_resource
+def load_model():
+    with open("hmeq_model.pkl", "rb") as file:
+        return pickle.load(file)
+
+model = load_model()
 
 # Title for the app
 st.markdown(
