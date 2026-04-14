@@ -2,6 +2,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
+#  Version of sklearn in streamlit-dev envriom3ent must match the version you used to create the model
 import sklearn 
 
 '''
