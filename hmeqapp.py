@@ -1,16 +1,21 @@
+
 # -*- coding: utf-8 -*-
+"""
+BUS 458: Analytics - From Data to Decisions
+Streamlit Interactive Deployment Template: HMEQ Loan Evaluation
+"""
+
 import streamlit as st
 import pickle
 import pandas as pd
-#  Version of sklearn in streamlit-dev envriom3ent must match the version you used to create the model
 import sklearn 
 
-'''
-# Load the trained model
-with open("hmeq_model.pkl", "rb") as file:
-    model = pickle.load(file)
-'''
-# Updated way to load for performance
+# ---------------------------------------------------------
+# 1. PAGE CONFIGURATION & MODEL LOADING
+# ---------------------------------------------------------
+st.set_page_config(page_title="HMEQ Loan Decision", page_icon="🏦", layout="wide")
+
+# Updated way to load for performance (Essential for GitHub/Streamlit Cloud deployment)
 @st.cache_resource
 def load_model():
     with open("hmeq_model.pkl", "rb") as file:
@@ -18,35 +23,42 @@ def load_model():
 
 model = load_model()
 
-# Title for the app
-st.markdown(
-    "<h1 style='text-align: center; background-color: #ffcccc; padding: 10px; color: #cc0000;'><b>Home Equity Loan Approval</b></h1>",
-    unsafe_allow_html=True
-)
+st.title("Home Equity Loan Scoring Dashboard")
+st.write("BUS 458 Interactive Decision Tool")
+st.divider()
 
-# Numeric inputs
-st.header("Enter Loan Applicant's Details")
+# ---------------------------------------------------------
+# 2. INPUT FORM (3-COLUMN LAYOUT)
+# ---------------------------------------------------------
+st.subheader("Applicant Financial Profile")
 
+col1, col2, col3 = st.columns(3)
 
+with col1:
+    st.markdown("##### Loan & Property")
+    loan = st.number_input("Loan Amount Requested ($)", min_value=1000, max_value=500000, value=20000, step=1000)
+    mortdue = st.number_input("Existing Mortgage Due ($)", min_value=0.0, max_value=1000000.0, value=50000.0, step=1000.0)
+    value = st.number_input("Property Assessed Value ($)", min_value=0.0, max_value=1000000.0, value=85000.0, step=1000.0)
+    reason = st.selectbox("Reason for Loan", ["DebtCon", "HomeImp"])
 
-# Input fields for numeric values
-# Check the ranges on numeric data and frequencies for class features
-loan = st.slider("Loan Amount (LOAN)", min_value=1000, max_value=500000, step=1000)
-mortdue = st.slider("Mortgage Due (MORTDUE)", min_value=0.0, max_value=1000000.0, step=1000.0)
-value = st.slider("Property Value (VALUE)", min_value=0.0, max_value=1000000.0, step=1000.0)
-yoj = st.selectbox("Years at Job (YOJ)", options=list(range(1, 41)))  # Options from 1 to 40
-derog = st.number_input("Derogatory Reports (DEROG)", min_value=0, max_value=15, step=1)
-delinq = st.selectbox("Delinquent Reports (DELINQ)", options=list(range(0, 15)))  # Options from 0 to 10
-clage = st.slider("Age of Oldest Trade Line in Months (CLAGE)", min_value=0.0, max_value=100.0, step=1.0)
-ninq = st.slider("Number of Recent Credit Inquiries (NINQ)", min_value=0.0, max_value=15.0, step=1.0)
-clno = st.slider("Number of Credit Lines (CLNO)", min_value=0.0, max_value=50.0, step=1.0)
-debtinc = st.slider("Debt-to-Income Ratio (DEBTINC)", min_value=0.0, max_value=200.0, step=0.1)
+with col2:
+    st.markdown("##### Employment & Income")
+    job = st.selectbox("Occupational Category", ["Office", "Mgr", "ProfExe", "Sales", "Self", "Other"])
+    yoj = st.slider("Years at Current Job", min_value=0, max_value=45, value=5, step=1)
+    debtinc = st.slider("Debt-to-Income Ratio (%)", min_value=0.0, max_value=205.0, value=35.0, step=0.1)
 
-# Categorical inputs with options
-reason = st.selectbox("Reason for Loan (REASON)", ["HomeImp", "DebtCon"])
-job = st.selectbox("Job Category (JOB)", ["ProfExe", "Other", "Mgr", "Office", "Sales"])
+with col3:
+    st.markdown("##### Credit History")
+    clage = st.slider("Age of Oldest Trade Line (Months)", min_value=0.0, max_value=1200.0, value=180.0, step=1.0)
+    clno = st.slider("Number of Open Credit Lines", min_value=0, max_value=75, value=15, step=1)
+    ninq = st.number_input("Recent Credit Inquiries", min_value=0, max_value=20, value=0, step=1)
+    delinq = st.number_input("Delinquent Credit Lines", min_value=0, max_value=20, value=0, step=1)
+    derog = st.number_input("Major Derogatory Reports", min_value=0, max_value=20, value=0, step=1)
 
-# Create the input data as a DataFrame
+# ---------------------------------------------------------
+# 3. DATA PREPROCESSING
+# ---------------------------------------------------------
+# Assemble the live user inputs into a 1-row DataFrame
 input_data = pd.DataFrame({
     "LOAN": [loan],
     "MORTDUE": [mortdue],
@@ -62,32 +74,36 @@ input_data = pd.DataFrame({
     "JOB": [job]
 })
 
+# One-hot encode categorical variables
+input_data_encoded = pd.get_dummies(input_data, columns=["REASON", "JOB"])
 
-
-
-# One-hot encode the categorical variables to match the model's training data
-input_data_encoded = pd.get_dummies(input_data, columns=['REASON', 'JOB'])
-
-# Ensure all expected columns are present (fill missing columns with 0s)
-model_columns = model.feature_names_in_  # Get the feature names used during training
+# Align columns to match the exact schema the model saw during training
+model_columns = model.feature_names_in_
 for col in model_columns:
     if col not in input_data_encoded.columns:
-        input_data_encoded[col] = 0  # Add missing column with value 0
+        input_data_encoded[col] = 0
 
-# Reorder columns to match the model's training data
+# Reorder columns to match training order exactly
 input_data_encoded = input_data_encoded[model_columns]
 
-# Predict button
-if st.button("Evaluate Loan"):
-    # Predict using the loaded model
+# ---------------------------------------------------------
+# 4. PREDICTION & BUSINESS LOGIC
+# ---------------------------------------------------------
+st.divider()
+
+if st.button("Evaluate Loan Application", type="primary", use_container_width=True):
+    # Get both the 0/1 prediction AND the raw probability
     prediction = model.predict(input_data_encoded)[0]
+    probabilities = model.predict_proba(input_data_encoded)[0]
     
-    # Display result
-    if prediction == 1:
-        st.write("The prediction is: **Bad Loan**  🚫")
+    # probabilities[1] is the exact probability of a Bad Loan (Class 1)
+    bad_loan_risk = probabilities[1] 
+    
+    # Display the calculated risk percentage 
+    st.write(f"**Calculated Default Risk:** {bad_loan_risk*100:.1f}%")
+    
+    # Apply business threshold logic (overriding the rigid 50% default)
+    if bad_loan_risk > 0.20:
+        st.error("The prediction is: **Bad Loan** 🚫 (Declined due to risk > 20%)")
     else:
-        st.write("The prediction is: **Good Loan** 💲")
-
-
-
-
+        st.success("The prediction is: **Good Loan** 💲 (Approved)")
